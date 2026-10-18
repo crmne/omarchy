@@ -16,11 +16,12 @@ cp "$ROOT/config/kitty/kitty.conf" "$test_home/.config/kitty/kitty.conf"
 cp "$ROOT/config/foot/foot.ini" "$test_home/.config/foot/foot.ini"
 
 # Nothing may signal or notify the real session. pgrep reports no running
-# terminals.
-for name in pkill gsettings omarchy-notification-send; do
+# terminals; fc-list knows one font, for omarchy-font-set.
+for name in pkill gsettings omarchy-notification-send omarchy-restart-shell omarchy-hook; do
   printf '#!/bin/bash\nprintf "%s %%s\\n" "$*" >>"%s"\n' "$name" "$calls" >"$stubs/$name"
 done
 printf '#!/bin/bash\nexit 1\n' >"$stubs/pgrep"
+printf '#!/bin/bash\necho "/usr/share/fonts/Test.ttf: Test Mono:style=Regular"\n' >"$stubs/fc-list"
 chmod +x "$stubs"/*
 
 run() {
@@ -73,3 +74,7 @@ grep -q '^base-size = 16' "$test_home/.config/omarchy/shell.toml" || fail "deskt
 [[ $(run omarchy-display-text-size) == *"terminal font: 12 pt"* ]] || fail "desktop text size reports the terminal size"
 pass "desktop text size sets terminals through omarchy-terminal-font-size"
 
+run omarchy-terminal-font-size 14
+run omarchy-font-set "Test Mono"
+grep -q '^font=Test Mono:size=14' "$test_home/.config/foot/foot.ini" || fail "changing the font keeps Foot's size" "$(grep '^font=' "$test_home/.config/foot/foot.ini")"
+pass "changing the font keeps Foot's size"
